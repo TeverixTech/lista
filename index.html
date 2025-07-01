@@ -7,43 +7,141 @@
   <style>
     body {
       font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
       padding: 20px;
       max-width: 800px;
       margin: auto;
-      background-color: #f7f7f7;
     }
+
     h2 {
       text-align: center;
       color: #333;
     }
+
     .aluno-card {
       background-color: white;
       padding: 15px;
       margin-top: 15px;
       border-radius: 8px;
       box-shadow: 0 0 5px rgba(0,0,0,0.1);
+      position: relative;
     }
+
     .aluno-card h3 {
       margin-bottom: 5px;
     }
+
     .turma {
       color: #777;
       font-size: 14px;
       margin-bottom: 10px;
     }
+
     ul {
       padding-left: 20px;
+    }
+
+    li {
+      margin-bottom: 5px;
+    }
+
+    .remove-list-btn {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      background-color: red;
+      color: white;
+      border: none;
+      padding: 6px 10px;
+      font-size: 12px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    #senha-container {
+      text-align: center;
+      margin-top: 100px;
+    }
+
+    #senha-container input {
+      padding: 10px;
+      font-size: 18px;
+      width: 200px;
+      margin-bottom: 10px;
+    }
+
+    #senha-container button {
+      padding: 10px 20px;
+      font-size: 16px;
+    }
+
+    .senha-area {
+      position: relative;
+      display: inline-block;
+    }
+
+    .senha-area button {
+      position: absolute;
+      right: 0;
+      top: 0;
+      height: 100%;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      font-size: 18px;
+      padding-right: 5px;
+    }
+
+    .erro-senha {
+      color: red;
+      margin-top: 10px;
+    }
+
+    #conteudo {
+      display: none;
+    }
+
+    #copiar-btn {
+      display: block;
+      margin: 20px auto;
+      background-color: #2e7d32;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      font-size: 16px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    #copiar-btn:hover {
+      background-color: #1b5e20;
     }
   </style>
 </head>
 <body>
 
-  <h2>Lista de Convidados</h2>
-  <div id="lista-convidados"></div>
+  <!-- Tela de senha -->
+  <div id="senha-container">
+    <h2>Digite a senha para acessar</h2>
+    <div class="senha-area">
+      <input type="password" id="senha-input" placeholder="Senha" />
+      <button type="button" onclick="toggleSenha()">👁</button>
+    </div>
+    <br>
+    <button onclick="verificarSenha()">Entrar</button>
+    <div class="erro-senha" id="erro-senha"></div>
+  </div>
+
+  <!-- Conteúdo protegido -->
+  <div id="conteudo">
+    <h2>Lista de Convidados</h2>
+    <button id="copiar-btn" onclick="copiarTodasListas()">📋 Copiar todas as listas</button>
+    <div id="lista-convidados"></div>
+  </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+    import { getDatabase, ref, onValue, remove } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyCdpqzoR52k31x66FfreAFePsWHysVmeDI",
@@ -57,35 +155,90 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
-
     const listaContainer = document.getElementById('lista-convidados');
+
+    let todasListasTexto = "";
 
     const alunosRef = ref(db, 'alunos');
     onValue(alunosRef, (snapshot) => {
-      listaContainer.innerHTML = ''; // limpa a lista antes de atualizar
+      listaContainer.innerHTML = '';
+      todasListasTexto = '';
 
       if (!snapshot.exists()) {
         listaContainer.innerHTML = '<p>Nenhum aluno registrado ainda.</p>';
         return;
       }
 
-      snapshot.forEach((childSnapshot) => {
-        const aluno = childSnapshot.val();
+      snapshot.forEach((child) => {
+        const aluno = child.val();
+        const alunoId = child.key;
+
         const card = document.createElement('div');
         card.className = 'aluno-card';
-
         card.innerHTML = `
           <h3>${aluno.nome}</h3>
           <div class="turma">Turma: ${aluno.turma}</div>
+          <button class="remove-list-btn" onclick="removerAluno('${alunoId}')">🗑 Apagar lista</button>
           <strong>Convidados:</strong>
-          <ul>
-            ${aluno.convidados.map(nome => `<li>${nome}</li>`).join('')}
-          </ul>
+          <ul>${aluno.convidados?.map(c => `<li>${c}</li>`).join('')}</ul>
         `;
+
+        // Adiciona ao texto para copiar
+        todasListasTexto += `Aluno: ${aluno.nome}\nTurma: ${aluno.turma}\nConvidados:\n${aluno.convidados?.map(c => `- ${c}`).join('\n')}\n\n`;
 
         listaContainer.appendChild(card);
       });
     });
+
+    // Função para apagar aluno
+    window.removerAluno = function (alunoId) {
+      if (confirm("Tem certeza que deseja apagar a lista deste aluno?")) {
+        const alunoRef = ref(db, `alunos/${alunoId}`);
+        remove(alunoRef);
+      }
+    };
+
+    // Copiar todas as listas
+    window.copiarTodasListas = function () {
+      navigator.clipboard.writeText(todasListasTexto.trim())
+        .then(() => alert('Listas copiadas para a área de transferência!'))
+        .catch(() => alert('Erro ao copiar as listas.'));
+    };
+
+    // Sistema de senha
+    window.verificarSenha = function () {
+      const senha = document.getElementById('senha-input').value;
+      const erro = document.getElementById('erro-senha');
+
+      if (senha === '1503') {
+        document.cookie = "senha_aceita=sim; path=/";
+        erro.textContent = '';
+        mostrarConteudo();
+      } else {
+        erro.textContent = 'Senha incorreta. Tente novamente.';
+      }
+    }
+
+    // Mostrar/ocultar senha
+    window.toggleSenha = function () {
+      const input = document.getElementById('senha-input');
+      input.type = input.type === 'password' ? 'text' : 'password';
+    }
+
+    function getCookie(nome) {
+      const valor = `; ${document.cookie}`;
+      const partes = valor.split(`; ${nome}=`);
+      if (partes.length === 2) return partes.pop().split(';').shift();
+    }
+
+    function mostrarConteudo() {
+      document.getElementById('senha-container').style.display = 'none';
+      document.getElementById('conteudo').style.display = 'block';
+    }
+
+    if (getCookie("senha_aceita") === "sim") {
+      mostrarConteudo();
+    }
   </script>
 
 </body>
