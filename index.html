@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Lista de Convidados</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      max-width: 800px;
+      margin: auto;
+      background-color: #f7f7f7;
+    }
+    h2 {
+      text-align: center;
+      color: #333;
+    }
+    .aluno-card {
+      background-color: white;
+      padding: 15px;
+      margin-top: 15px;
+      border-radius: 8px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.1);
+    }
+    .aluno-card h3 {
+      margin-bottom: 5px;
+    }
+    .turma {
+      color: #777;
+      font-size: 14px;
+      margin-bottom: 10px;
+    }
+    ul {
+      padding-left: 20px;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>Lista de Convidados</h2>
+  <div id="lista-convidados"></div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCdpqzoR52k31x66FfreAFePsWHysVmeDI",
+      authDomain: "alunos-94699.firebaseapp.com",
+      databaseURL: "https://alunos-94699-default-rtdb.firebaseio.com",
+      projectId: "alunos-94699",
+      storageBucket: "alunos-94699.appspot.com",
+      messagingSenderId: "501341548930",
+      appId: "1:501341548930:web:476653e88c41d07d989f9b"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    const listaContainer = document.getElementById('lista-convidados');
+
+    const alunosRef = ref(db, 'alunos');
+    onValue(alunosRef, (snapshot) => {
+      listaContainer.innerHTML = ''; // limpa a lista antes de atualizar
+
+      if (!snapshot.exists()) {
+        listaContainer.innerHTML = '<p>Nenhum aluno registrado ainda.</p>';
+        return;
+      }
+
+      snapshot.forEach((childSnapshot) => {
+        const aluno = childSnapshot.val();
+        const card = document.createElement('div');
+        card.className = 'aluno-card';
+
+        card.innerHTML = `
+          <h3>${aluno.nome}</h3>
+          <div class="turma">Turma: ${aluno.turma}</div>
+          <strong>Convidados:</strong>
+          <ul>
+            ${aluno.convidados.map(nome => `<li>${nome}</li>`).join('')}
+          </ul>
+        `;
+
+        listaContainer.appendChild(card);
+      });
+    });
+  </script>
+
+</body>
+</html>
